@@ -1,0 +1,103 @@
+import { useState, useEffect } from 'react';
+import DMA200Scanner    from './components/DMA200Scanner';
+import ATHScanner       from './components/ATHScanner';
+import AutoSalesScanner from './components/AutoSalesScanner';
+import Watchlist        from './components/Watchlist';
+import { useWatchlist } from './hooks/useWatchlist';
+import './App.css';
+
+export default function App() {
+  const [symbol, setSymbol]     = useState(null);
+  const [theme, setTheme]       = useState(() => localStorage.getItem('ss-theme') || 'dark');
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [spinning, setSpinning] = useState(false);
+
+  const { watchlist, quotes, refreshing, addToWatchlist, removeFromWatchlist } = useWatchlist();
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('ss-theme', theme);
+  }, [theme]);
+
+  const handleSelect = (sym) => setSymbol(sym);
+
+  const handleRefresh = () => {
+    setSpinning(true);
+    setRefreshKey(k => k + 1);
+    setTimeout(() => setSpinning(false), 1200);
+  };
+
+  return (
+    <div className="app">
+      {/* ── HEADER ── */}
+      <header className="app-header">
+        <div className="logo">
+          <span className="logo-icon">◈</span>
+          <span className="logo-text">Stock<em>Sense</em></span>
+          <span className="logo-badge">India</span>
+        </div>
+
+        {symbol && (
+          <div className="selected-symbol-badge">
+            <span className="sel-label">Selected:</span>
+            <span className="sel-sym">{symbol}</span>
+            <button className="sel-clear" onClick={() => setSymbol(null)} title="Deselect">✕</button>
+          </div>
+        )}
+
+        <div className="header-right">
+          <button
+            className={`refresh-btn ${spinning ? 'spinning' : ''}`}
+            onClick={handleRefresh}
+            disabled={spinning}
+            title="Saare scanners refresh karo"
+          >
+            <span className="refresh-icon">↻</span>
+            Refresh
+          </button>
+          <button
+            className="theme-toggle"
+            onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+            title="Toggle theme"
+          >
+            <span className="toggle-icon">{theme === 'dark' ? '🌙' : '☀️'}</span>
+            <div className="toggle-track"><div className="toggle-thumb" /></div>
+          </button>
+          <a href="https://nseindia.com" target="_blank" rel="noreferrer" className="nse-link">NSE ↗</a>
+        </div>
+      </header>
+
+      {/* ── 4-COLUMN BODY ── */}
+      <div className="four-col-layout">
+
+        {/* COL 1: WATCHLIST */}
+        <div className="col-panel">
+          <Watchlist
+            watchlist={watchlist}
+            quotes={quotes}
+            refreshing={refreshing}
+            onSelect={handleSelect}
+            onAdd={addToWatchlist}
+            onRemove={removeFromWatchlist}
+          />
+        </div>
+
+        {/* COL 2: 200 DMA CROSSOVER */}
+        <div className="col-panel">
+          <DMA200Scanner key={`dma-${refreshKey}`} onSelect={handleSelect} />
+        </div>
+
+        {/* COL 3: ALL-TIME HIGH */}
+        <div className="col-panel">
+          <ATHScanner key={`ath-${refreshKey}`} onSelect={handleSelect} />
+        </div>
+
+        {/* COL 4: AUTO SALES & MARKET SHARE */}
+        <div className="col-panel">
+          <AutoSalesScanner key={`auto-${refreshKey}`} onSelect={handleSelect} />
+        </div>
+
+      </div>
+    </div>
+  );
+}
