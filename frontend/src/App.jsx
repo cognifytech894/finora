@@ -8,6 +8,7 @@ import PortfolioTracker from './components/PortfolioTracker';
 import OrdersTracker    from './components/OrdersTracker';
 import NewsFeed         from './components/NewsFeed';
 import { useWatchlist } from './hooks/useWatchlist';
+import { invalidateAllCache } from './hooks/useDataCache';
 import './App.css';
 
 const TABS = [
@@ -20,8 +21,7 @@ const TABS = [
 
 export default function App() {
   const [symbol, setSymbol]     = useState(null);
-  const [theme, setTheme]       = useState(() => localStorage.getItem('finora-theme') || 'dark');
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [theme, setTheme]       = useState(() => localStorage.getItem('sharemint-theme') || 'dark');
   const [spinning, setSpinning] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
 
@@ -29,13 +29,20 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('finora-theme', theme);
+    localStorage.setItem('sharemint-theme', theme);
   }, [theme]);
 
+  // Global refresh: cache invalidate karo, scanners apne aap re-fetch karenge
   const handleRefresh = () => {
     setSpinning(true);
-    setRefreshKey(k => k + 1);
+    invalidateAllCache();               // ← sab scanner cache saaf
     setTimeout(() => setSpinning(false), 1200);
+  };
+
+  // Stock select from news: dashboard pe le jao aur symbol set karo
+  const handleStockSelectFromNews = (sym) => {
+    setSymbol(sym);
+    setActiveTab('dashboard');
   };
 
   return (
@@ -44,8 +51,8 @@ export default function App() {
       <header className="app-header">
         <div className="logo">
           <span className="logo-icon">◈</span>
-          <span className="logo-text">Fin<em>ora</em></span>
-          <span className="logo-badge">India</span>
+          <span className="logo-text">Share <em>Mint</em></span>
+          <span className="logo-badge">sharemint.co</span>
         </div>
 
         {/* NAV TABS */}
@@ -74,7 +81,7 @@ export default function App() {
             className={`refresh-btn ${spinning ? 'spinning' : ''}`}
             onClick={handleRefresh}
             disabled={spinning}
-            title="Refresh all scanners"
+            title="Refresh all scanners (cache clear karke fresh data fetch karega)"
           >
             <span className="refresh-icon">↻</span>
             <span className="refresh-txt">Refresh</span>
@@ -109,12 +116,15 @@ export default function App() {
                 onRemove={removeFromWatchlist}
               />
             </div>
+            {/*
             <div className="dash-center">
-              <DMA200Scanner key={`dma-${refreshKey}`} onSelect={setSymbol} />
+              {/* No key prop needed — cache handles no-refetch on tab switch */}
+              <DMA200Scanner onSelect={setSymbol} />
             </div>
             <div className="dash-right">
-              <NewsFeed />
+              <NewsFeed onStockSelect={handleStockSelectFromNews} />
             </div>
+            */}
           </div>
         )}
 
@@ -122,13 +132,13 @@ export default function App() {
         {activeTab === 'scanners' && (
           <div className="scanners-layout">
             <div className="col-panel">
-              <DMA200Scanner key={`dma-s-${refreshKey}`} onSelect={setSymbol} />
+              <DMA200Scanner onSelect={setSymbol} />
             </div>
             <div className="col-panel">
-              <ATHScanner key={`ath-s-${refreshKey}`} onSelect={setSymbol} />
+              <ATHScanner onSelect={setSymbol} />
             </div>
             <div className="col-panel">
-              <AutoSalesScanner key={`auto-s-${refreshKey}`} onSelect={setSymbol} />
+              <AutoSalesScanner onSelect={setSymbol} />
             </div>
           </div>
         )}
@@ -143,7 +153,7 @@ export default function App() {
         {/* NEWS TAB */}
         {activeTab === 'news' && (
           <div className="single-panel-layout">
-            <NewsFeed />
+            <NewsFeed onStockSelect={handleStockSelectFromNews} />
           </div>
         )}
 

@@ -1,5 +1,5 @@
 {
-  "name": "stocksense-india",
+  "name": "sharemint",
   "version": "1.0.0",
   "description": "NSE/BSE Stock Analyzer — React + Node.js + Electron",
   "main": "main.js",
@@ -12,8 +12,8 @@
     "build-portable": "npm run build-react && electron-builder --win portable"
   },
   "build": {
-    "appId": "com.stocksense.india",
-    "productName": "StockSense India",
+    "appId": "co.sharemint.app",
+    "productName": "Share Mint",
     "directories": {
       "output": "dist"
     },
@@ -35,7 +35,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "StockSense India"
+      "shortcutName": "Share Mint"
     }
   },
   "devDependencies": {

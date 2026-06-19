@@ -45,7 +45,7 @@ function createWindow() {
     height: 860,
     minWidth: 1000,
     minHeight: 600,
-    title: 'StockSense India',
+    title: 'Share Mint',
     backgroundColor: '#050810',
     webPreferences: {
       nodeIntegration: false,
@@ -110,13 +110,13 @@ function createMenu() {
       label: 'Help',
       submenu: [
         {
-          label: 'About StockSense India',
+          label: 'About Share Mint',
           click: () => {
             const { dialog } = require('electron');
             dialog.showMessageBox(mainWindow, {
               type: 'info',
-              title: 'StockSense India',
-              message: 'StockSense India v1.0.0',
+              title: 'Share Mint',
+              message: 'Share Mint v1.0.0',
               detail: 'NSE/BSE Technical Analysis Tool\nReact + Node.js + Electron\n\n⚠️ Sirf educational purpose ke liye.',
             });
           },

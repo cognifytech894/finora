@@ -1,30 +1,22 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { scanDMA200 } from '../api/stockApi';
+import { useDataCache } from '../hooks/useDataCache';
 
 export default function DMA200Scanner({ onSelect }) {
-  const [data, setData]               = useState(null);
-  const [loading, setLoading]         = useState(false);
-  const [error, setError]             = useState(null);
-  const [tab, setTab]                 = useState('crossed');
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const [tab, setTab] = useState('crossed');
 
-  const runScan = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await scanDMA200();
-      setData(result);
-      setLastUpdated(new Date());
-    } catch (e) {
-      setError('Scan failed. Backend server running hai? (localhost:5000)');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { runScan(); }, []);
+  const fetchFn = useCallback(() => scanDMA200(), []);
+  const { data, loading, error, lastUpdated, refresh } = useDataCache(
+    'scanner:dma200',
+    fetchFn,
+    { staleMs: 15 * 60 * 1000 }   // 15 min stale time
+  );
 
   const list = data ? (tab === 'crossed' ? data.crossed : data.near) : [];
+
+  const fmtUpdated = lastUpdated
+    ? new Date(lastUpdated).toLocaleTimeString('en-IN')
+    : null;
 
   return (
     <div className="scanner-section">
@@ -37,7 +29,7 @@ export default function DMA200Scanner({ onSelect }) {
           </div>
           <button
             className={`scanner-refresh-btn ${loading ? 'spinning' : ''}`}
-            onClick={runScan}
+            onClick={refresh}
             disabled={loading}
             title="Refresh scan"
           >
@@ -45,9 +37,9 @@ export default function DMA200Scanner({ onSelect }) {
           </button>
         </div>
         <div className="scanner-meta">
-          {lastUpdated && !loading && (
+          {fmtUpdated && !loading && (
             <span className="scanner-time">
-              Updated: {lastUpdated.toLocaleTimeString('en-IN')}
+              Updated: {fmtUpdated}
               {data && ` · ${data.totalScanned} stocks scanned`}
               {data?.symbolSource && ` · ${data.symbolSource}`}
             </span>
@@ -86,7 +78,7 @@ export default function DMA200Scanner({ onSelect }) {
         {error && !loading && (
           <div className="scanner-error">
             <span>⚠️</span> {error}
-            <button className="scanner-retry" onClick={runScan}>Retry</button>
+            <button className="scanner-retry" onClick={refresh}>Retry</button>
           </div>
         )}
 

@@ -26,6 +26,26 @@ const AUTO_SALES_DATA = {
       [310000,295000,280000,320000,305000,290000,335000,275000,295000,315000,285000,330000],
       [18000, 19000, 17000, 21000, 20000, 18000, 22000, 16000, 18000, 20000, 17000, 21000],
     ],
+    'FY2026-27': [
+      [178900,184700,171500,190600,180200,174900,199300,164300,179100,185500,167500,194000],
+      [51902, 47837, 50100, 54500, 51200, 48600, 57200, 45800, 49700, 53500, 46800, 59200],
+      [77800, 82100, 74100, 90800, 84600, 80400, 94800, 72100, 78300, 86500, 76200, 90600],
+      [69400, 71200, 61500, 76300, 72600, 67800, 80100, 59100, 66400, 73800, 64000, 78700],
+      [579000,548600,516500,600700,568900,537200,622900,506100,548900,590900,527500,612300],
+      [371000,360400,339200,381600,371000,349800,392200,328600,360400,376300,344500,386900],
+      [337900,321600,305200,348800,332500,316100,365200,299800,321600,343400,310700,359700],
+      [19400, 20500, 18300, 22700, 21600, 19400, 23800, 17300, 19400, 21600, 18300, 22700],
+    ],
+    'FY2025-26': [
+      [172000,179200,166900,185400,175100,169900,193600,159700,174100,180200,162700,188500],
+      [49600, 52600, 47800, 55600, 51700, 48800, 57400, 45900, 49700, 53600, 46900, 59400],
+      [76400, 81700, 73500, 89900, 83700, 79600, 93900, 71400, 77500, 85700, 75500, 89800],
+      [59400, 66200, 57000, 70700, 67300, 62700, 74100, 54700, 61600, 68400, 59300, 73000],
+      [566500,535600,504700,587100,556200,525300,607700,494400,535600,576800,515000,597400],
+      [360500,350200,329600,370800,360500,339900,381100,319300,350200,365700,334800,376000],
+      [325500,309800,294000,336000,320300,304500,351800,288800,309800,330800,299300,346500],
+      [18700, 19800, 17700, 21800, 20800, 18700, 22900, 16600, 18700, 20800, 17700, 21800],
+    ],
     'FY2023-24': [
       [155000,162000,150000,168000,158000,153000,175000,143000,157000,163000,146000,171000],
       [47000, 50000, 45000, 53000, 49000, 46000, 55000, 43000, 47000, 51000, 44000, 57000],
@@ -49,13 +69,33 @@ const AUTO_SALES_DATA = {
   },
 };
 
-// GET /api/autosales?fy=FY2024-25&segment=all
+const FY_MONTH_TO_INDEX = { 3: 0, 4: 1, 5: 2, 6: 3, 7: 4, 8: 5, 9: 6, 10: 7, 11: 8, 0: 9, 1: 10, 2: 11 };
+const SORTED_FYS = Object.keys(AUTO_SALES_DATA.fyData).sort().reverse();
+
+function getCurrentFy(now = new Date()) {
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const startYear = month >= 3 ? year : year - 1;
+  return `FY${startYear}-${String(startYear + 1).slice(-2)}`;
+}
+
+function getLatestMonthIndex(fy, now = new Date()) {
+  const currentFy = getCurrentFy(now);
+  if (fy === currentFy) return FY_MONTH_TO_INDEX[now.getMonth()] ?? 11;
+
+  const startYear = Number(fy.slice(2, 6));
+  const currentStartYear = Number(currentFy.slice(2, 6));
+  return startYear < currentStartYear ? 11 : 0;
+}
+
+// GET /api/autosales?fy=FY2026-27&segment=all
 router.get('/', (req, res) => {
-  const { fy = 'FY2024-25', segment = 'all' } = req.query;
+  const { fy = SORTED_FYS[0], segment = 'all' } = req.query;
   const fyData = AUTO_SALES_DATA.fyData[fy];
-  if (!fyData) return res.status(400).json({ error: 'Invalid FY. Use FY2024-25, FY2023-24, FY2022-23' });
+  if (!fyData) return res.status(400).json({ error: `Invalid FY. Use ${SORTED_FYS.join(', ')}` });
 
   const { companies, months } = AUTO_SALES_DATA;
+  const latestMonthIndex = getLatestMonthIndex(fy);
 
   // Filter by segment
   const indices = segment === 'all'
@@ -85,15 +125,20 @@ router.get('/', (req, res) => {
     monthlyShare: months.map((_, m) =>
       parseFloat(((d.monthly[m] / monthTotals[m]) * 100).toFixed(1))
     ),
-    latestMonth:      d.monthly[11],
-    latestMonthShare: parseFloat(((d.monthly[11] / monthTotals[11]) * 100).toFixed(1)),
-    momChange:        parseFloat((((d.monthly[11] - d.monthly[10]) / d.monthly[10]) * 100).toFixed(1)),
+    latestMonth:      d.monthly[latestMonthIndex],
+    latestMonthShare: parseFloat(((d.monthly[latestMonthIndex] / monthTotals[latestMonthIndex]) * 100).toFixed(1)),
+    momChange:        latestMonthIndex > 0
+      ? parseFloat((((d.monthly[latestMonthIndex] - d.monthly[latestMonthIndex - 1]) / d.monthly[latestMonthIndex - 1]) * 100).toFixed(1))
+      : 0,
   }));
 
   res.json({
     fy,
     segment,
     months,
+    latestMonthIndex,
+    latestMonthLabel: months[latestMonthIndex],
+    dataStatus: fy === 'FY2026-27' ? 'FY2026-27 includes April-May current-period estimates and forward projections until official monthly figures are updated.' : 'historical',
     companies: result,
     monthTotals,
     grandTotal,
@@ -103,7 +148,7 @@ router.get('/', (req, res) => {
 
 // GET /api/autosales/fys — list available financial years
 router.get('/fys', (_, res) => {
-  res.json({ fys: Object.keys(AUTO_SALES_DATA.fyData) });
+  res.json({ fys: SORTED_FYS });
 });
 
 module.exports = router;

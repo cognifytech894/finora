@@ -1,4 +1,4 @@
-# StockSense India — React + Node.js Stock Analyzer
+# Share Mint - React + Node.js Stock Analyzer
 
 NSE stock analysis app with candlestick charts, RSI, MACD, and BUY/SELL/HOLD signals.
 

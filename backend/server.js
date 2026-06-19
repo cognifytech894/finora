@@ -14,7 +14,7 @@ app.use('/api/stock',     stockRoutes);
 app.use('/api/autosales', autoSalesRoutes);
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'StockSense API running' });
+  res.json({ status: 'ok', message: 'Share Mint API running' });
 });
 
 app.listen(PORT, () => {

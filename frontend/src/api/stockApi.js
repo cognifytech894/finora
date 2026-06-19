@@ -17,5 +17,5 @@ export const scanDMA200 = () =>
 export const scanATHHigh = () =>
   api.get('/stock/scanner/athhigh').then(r => r.data);
 
-export const fetchAutoSales = (fy = 'FY2024-25', segment = 'all') =>
+export const fetchAutoSales = (fy = 'FY2026-27', segment = 'all') =>
   api.get('/autosales', { params: { fy, segment } }).then(r => r.data);

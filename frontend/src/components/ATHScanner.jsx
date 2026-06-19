@@ -1,29 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { scanATHHigh } from '../api/stockApi';
+import { useDataCache } from '../hooks/useDataCache';
 
 export default function ATHScanner({ onSelect }) {
-  const [data, setData]               = useState(null);
-  const [loading, setLoading]         = useState(false);
-  const [error, setError]             = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
-
-  const runScan = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await scanATHHigh();
-      setData(result);
-      setLastUpdated(new Date());
-    } catch (e) {
-      setError('Scan failed. Backend server running hai? (localhost:5000)');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { runScan(); }, []);
+  const fetchFn = useCallback(() => scanATHHigh(), []);
+  const { data, loading, error, lastUpdated, refresh } = useDataCache(
+    'scanner:athhigh',
+    fetchFn,
+    { staleMs: 15 * 60 * 1000 }
+  );
 
   const list = data?.results || [];
+  const fmtUpdated = lastUpdated ? new Date(lastUpdated).toLocaleTimeString('en-IN') : null;
 
   return (
     <div className="scanner-section">
@@ -36,7 +24,7 @@ export default function ATHScanner({ onSelect }) {
           </div>
           <button
             className={`scanner-refresh-btn ${loading ? 'spinning' : ''}`}
-            onClick={runScan}
+            onClick={refresh}
             disabled={loading}
             title="Refresh scan"
           >
@@ -44,9 +32,9 @@ export default function ATHScanner({ onSelect }) {
           </button>
         </div>
         <div className="scanner-meta">
-          {lastUpdated && !loading && (
+          {fmtUpdated && !loading && (
             <span className="scanner-time">
-              Updated: {lastUpdated.toLocaleTimeString('en-IN')}
+              Updated: {fmtUpdated}
               {data && ` · ${data.totalScanned} stocks scanned`}
               {data?.symbolSource && ` · ${data.symbolSource}`}
             </span>
@@ -82,7 +70,7 @@ export default function ATHScanner({ onSelect }) {
         {error && !loading && (
           <div className="scanner-error">
             <span>⚠️</span> {error}
-            <button className="scanner-retry" onClick={runScan}>Retry</button>
+            <button className="scanner-retry" onClick={refresh}>Retry</button>
           </div>
         )}
 
@@ -104,8 +92,8 @@ export default function ATHScanner({ onSelect }) {
             </div>
 
             {list.map((item) => {
-              const pct      = parseFloat(item.pctFromATH);
-              const isAtTop  = pct >= -2;
+              const pct     = parseFloat(item.pctFromATH);
+              const isAtTop = pct >= -2;
               return (
                 <button
                   key={item.symbol}

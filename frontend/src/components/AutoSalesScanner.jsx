@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { fetchAutoSales } from '../api/stockApi';
+import { useDataCache } from '../hooks/useDataCache';
 
-const FYS    = ['FY2024-25', 'FY2023-24', 'FY2022-23'];
+const FYS    = ['FY2026-27', 'FY2025-26', 'FY2024-25', 'FY2023-24', 'FY2022-23'];
 const SEGS   = [
   { value: 'all', label: 'Sabhi Segments' },
   { value: 'PV',  label: 'Passenger Vehicles' },
@@ -104,38 +105,34 @@ function DonutChart({ slices, size=160 }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function AutoSalesScanner({ onSelect }) {
-  const [data,        setData]        = useState(null);
-  const [loading,     setLoading]     = useState(false);
-  const [error,       setError]       = useState(null);
-  const [fy,          setFy]          = useState('FY2024-25');
-  const [seg,         setSeg]         = useState('all');
-  const [tab,         setTab]         = useState('market-share');
-  const [lastUpdated, setLastUpdated] = useState(null);
-  const [sortMonth,   setSortMonth]   = useState(11); // March by default
+  const [fy,        setFy]        = useState('FY2026-27');
+  const [seg,       setSeg]       = useState('all');
+  const [tab,       setTab]       = useState('market-share');
+  const [sortMonth, setSortMonth] = useState(2); // June/current FY by default
 
-  const load = useCallback(async (fyVal, segVal) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await fetchAutoSales(fyVal, segVal);
-      setData(result);
-      setLastUpdated(new Date());
-    } catch (e) {
-      setError('Data load nahi hua. Backend server running hai? (localhost:5000)');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // Dynamic cache key based on fy + seg selection
+  const cacheKey = `autosales:${fy}:${seg}`;
+  const fetchFn  = useCallback(() => fetchAutoSales(fy, seg), [fy, seg]);
+  const { data, loading, error, lastUpdated, refresh } = useDataCache(
+    cacheKey,
+    fetchFn,
+    { staleMs: 30 * 60 * 1000 }   // 30 min (static data, rarely changes)
+  );
 
-  useEffect(() => { load(fy, seg); }, []);
-
-  const handleFy  = e => { setFy(e.target.value);  load(e.target.value, seg); };
-  const handleSeg = e => { setSeg(e.target.value); load(fy, e.target.value); };
+  const handleFy  = e => setFy(e.target.value);
+  const handleSeg = e => setSeg(e.target.value);
 
   const companies = data?.companies || [];
+  const months = data?.months || MONTHS;
+
+  useEffect(() => {
+    if (typeof data?.latestMonthIndex === 'number') {
+      setSortMonth(data.latestMonthIndex);
+    }
+  }, [data?.latestMonthIndex]);
 
   // Sort companies by selected month sales (descending)
-  const sorted = [...companies].sort((a, b) => b.monthly[sortMonth] - a.monthly[sortMonth]);
+  const sorted = [...companies].sort((a, b) => (b.monthly[sortMonth] || 0) - (a.monthly[sortMonth] || 0));
 
   return (
     <div className="scanner-section">
@@ -149,7 +146,7 @@ export default function AutoSalesScanner({ onSelect }) {
           </div>
           <button
             className={`scanner-refresh-btn ${loading ? 'spinning' : ''}`}
-            onClick={() => load(fy, seg)}
+            onClick={refresh}
             disabled={loading}
             title="Refresh"
           >↻</button>
@@ -225,7 +222,7 @@ export default function AutoSalesScanner({ onSelect }) {
         {error && !loading && (
           <div className="scanner-error">
             <span>⚠️</span> {error}
-            <button className="scanner-retry" onClick={() => load(fy, seg)}>Retry</button>
+            <button className="scanner-retry" onClick={refresh}>Retry</button>
           </div>
         )}
 
@@ -301,7 +298,7 @@ export default function AutoSalesScanner({ onSelect }) {
 
             {/* Month selector */}
             <div style={{ display:'flex', gap:4, flexWrap:'wrap', marginBottom:12 }}>
-              {MONTHS.map((m, i) => (
+              {months.map((m, i) => (
                 <button
                   key={m}
                   onClick={() => setSortMonth(i)}
@@ -347,7 +344,7 @@ export default function AutoSalesScanner({ onSelect }) {
                       {fmtUnits(c.monthly[sortMonth])}
                     </div>
                     <div style={{ fontSize:10, color:'var(--text3)' }}>
-                      {MONTHS[sortMonth]} · {c.monthlyShare[sortMonth]}% share
+                      {months[sortMonth]} · {c.monthlyShare[sortMonth]}% share
                     </div>
                   </div>
                 </div>
@@ -361,7 +358,7 @@ export default function AutoSalesScanner({ onSelect }) {
                     return (
                       <div
                         key={mi}
-                        title={`${MONTHS[mi]}: ${fmtUnits(v)} (${c.monthlyShare[mi]}%)`}
+                        title={`${months[mi]}: ${fmtUnits(v)} (${c.monthlyShare[mi]}%)`}
                         style={{
                           flex:1, height:h,
                           background: isSelected ? c.color : c.color + '55',
@@ -403,7 +400,7 @@ export default function AutoSalesScanner({ onSelect }) {
               <div style={{ fontSize:11, color:'var(--text2)', marginBottom:8, fontWeight:500 }}>
                 Monthly market share stacked
               </div>
-              {MONTHS.map((m, mi) => (
+              {months.map((m, mi) => (
                 <div key={m} style={{ display:'flex', alignItems:'center', gap:6, marginBottom:4 }}>
                   <span style={{ width:24, fontSize:10, color:'var(--text3)', flexShrink:0 }}>{m}</span>
                   <div style={{ flex:1, display:'flex', height:12, borderRadius:4, overflow:'hidden', gap:1 }}>

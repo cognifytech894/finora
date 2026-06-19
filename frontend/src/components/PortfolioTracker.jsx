@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { quoteStock } from '../api/stockApi';
 
-const STORAGE_KEY = 'finora-portfolio-v1';
+const STORAGE_KEY = 'sharemint-portfolio-v1';
 
 export default function PortfolioTracker() {
   const [holdings, setHoldings] = useState(() => {
