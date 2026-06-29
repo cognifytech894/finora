@@ -5,7 +5,7 @@ NSE stock analysis app with candlestick charts, RSI, MACD, and BUY/SELL/HOLD sig
 ## Project Structure
 
 ```
-stockapp/
+sharemint/
 ├── backend/                 # Node.js Express API
 │   ├── server.js            # Entry point
 │   ├── routes/

@@ -2,7 +2,22 @@ import { useState, useCallback, useEffect } from 'react';
 import { fetchAutoSales } from '../api/stockApi';
 import { useDataCache } from '../hooks/useDataCache';
 
-const FYS    = ['FY2026-27', 'FY2025-26', 'FY2024-25', 'FY2023-24', 'FY2022-23'];
+function getCurrentFy() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const startYear = now.getMonth() >= 3 ? year : year - 1;
+  return `FY${startYear}-${String(startYear + 1).slice(-2)}`;
+}
+
+function buildFyOptions(count = 5) {
+  const currentStart = Number(getCurrentFy().slice(2, 6));
+  return Array.from({ length: count }, (_, i) => {
+    const start = currentStart - i;
+    return `FY${start}-${String(start + 1).slice(-2)}`;
+  });
+}
+
+const FYS    = buildFyOptions();
 const SEGS   = [
   { value: 'all', label: 'Sabhi Segments' },
   { value: 'PV',  label: 'Passenger Vehicles' },
@@ -105,7 +120,7 @@ function DonutChart({ slices, size=160 }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function AutoSalesScanner({ onSelect }) {
-  const [fy,        setFy]        = useState('FY2026-27');
+  const [fy,        setFy]        = useState(getCurrentFy);
   const [seg,       setSeg]       = useState('all');
   const [tab,       setTab]       = useState('market-share');
   const [sortMonth, setSortMonth] = useState(2); // June/current FY by default

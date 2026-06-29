@@ -1,5 +1,5 @@
 {
-  "name": "stockapp-backend",
+  "name": "sharemint-backend",
   "version": "1.0.0",
   "description": "NSE Stock Analysis API",
   "main": "server.js",

@@ -71,6 +71,7 @@ const AUTO_SALES_DATA = {
 
 const FY_MONTH_TO_INDEX = { 3: 0, 4: 1, 5: 2, 6: 3, 7: 4, 8: 5, 9: 6, 10: 7, 11: 8, 0: 9, 1: 10, 2: 11 };
 const SORTED_FYS = Object.keys(AUTO_SALES_DATA.fyData).sort().reverse();
+const LATEST_STATIC_FY = SORTED_FYS[0];
 
 function getCurrentFy(now = new Date()) {
   const year = now.getFullYear();
@@ -79,23 +80,49 @@ function getCurrentFy(now = new Date()) {
   return `FY${startYear}-${String(startYear + 1).slice(-2)}`;
 }
 
+function getFyStartYear(fy) {
+  return Number(String(fy).slice(2, 6));
+}
+
+function projectFyData(fy) {
+  const baseData = AUTO_SALES_DATA.fyData[LATEST_STATIC_FY];
+  const yearGap = Math.max(0, getFyStartYear(fy) - getFyStartYear(LATEST_STATIC_FY));
+  const growthFactor = Math.pow(1.04, yearGap);
+
+  return baseData.map(companyMonths =>
+    companyMonths.map(units => Math.round(units * growthFactor))
+  );
+}
+
+function getFyData(fy) {
+  return AUTO_SALES_DATA.fyData[fy] || projectFyData(fy);
+}
+
+function buildFyOptions(now = new Date(), count = 5) {
+  const currentStart = getFyStartYear(getCurrentFy(now));
+  return Array.from({ length: count }, (_, i) => {
+    const startYear = currentStart - i;
+    return `FY${startYear}-${String(startYear + 1).slice(-2)}`;
+  });
+}
+
 function getLatestMonthIndex(fy, now = new Date()) {
   const currentFy = getCurrentFy(now);
   if (fy === currentFy) return FY_MONTH_TO_INDEX[now.getMonth()] ?? 11;
 
-  const startYear = Number(fy.slice(2, 6));
-  const currentStartYear = Number(currentFy.slice(2, 6));
+  const startYear = getFyStartYear(fy);
+  const currentStartYear = getFyStartYear(currentFy);
   return startYear < currentStartYear ? 11 : 0;
 }
 
 // GET /api/autosales?fy=FY2026-27&segment=all
 router.get('/', (req, res) => {
-  const { fy = SORTED_FYS[0], segment = 'all' } = req.query;
-  const fyData = AUTO_SALES_DATA.fyData[fy];
-  if (!fyData) return res.status(400).json({ error: `Invalid FY. Use ${SORTED_FYS.join(', ')}` });
+  const { fy = getCurrentFy(), segment = 'all' } = req.query;
+  const fyData = getFyData(fy);
 
   const { companies, months } = AUTO_SALES_DATA;
   const latestMonthIndex = getLatestMonthIndex(fy);
+  const isProjectedFy = !AUTO_SALES_DATA.fyData[fy];
 
   // Filter by segment
   const indices = segment === 'all'
@@ -138,7 +165,12 @@ router.get('/', (req, res) => {
     months,
     latestMonthIndex,
     latestMonthLabel: months[latestMonthIndex],
-    dataStatus: fy === 'FY2026-27' ? 'FY2026-27 includes April-May current-period estimates and forward projections until official monthly figures are updated.' : 'historical',
+    dataStatus: isProjectedFy
+      ? `${fy} uses projected monthly values until official company/SIAM figures are updated.`
+      : fy === getCurrentFy()
+        ? `${fy} includes April, May, June and forward projections for upcoming months where official figures are pending.`
+        : 'historical',
+    isProjectedFy,
     companies: result,
     monthTotals,
     grandTotal,
@@ -148,7 +180,7 @@ router.get('/', (req, res) => {
 
 // GET /api/autosales/fys — list available financial years
 router.get('/fys', (_, res) => {
-  res.json({ fys: SORTED_FYS });
+  res.json({ fys: buildFyOptions() });
 });
 
 module.exports = router;

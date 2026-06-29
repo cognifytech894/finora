@@ -20,9 +20,9 @@ const TABS = [
 ];
 
 export default function App() {
-  const [symbol, setSymbol]     = useState(null);
-  const [theme, setTheme]       = useState(() => localStorage.getItem('sharemint-theme') || 'dark');
-  const [spinning, setSpinning] = useState(false);
+  const [symbol, setSymbol]       = useState(null);
+  const [theme, setTheme]         = useState(() => localStorage.getItem('sharemint-theme') || 'dark');
+  const [spinning, setSpinning]   = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
 
   const { watchlist, quotes, refreshing, addToWatchlist, removeFromWatchlist } = useWatchlist();
@@ -32,14 +32,12 @@ export default function App() {
     localStorage.setItem('sharemint-theme', theme);
   }, [theme]);
 
-  // Global refresh: cache invalidate karo, scanners apne aap re-fetch karenge
   const handleRefresh = () => {
     setSpinning(true);
-    invalidateAllCache();               // ← sab scanner cache saaf
+    invalidateAllCache();
     setTimeout(() => setSpinning(false), 1200);
   };
 
-  // Stock select from news: dashboard pe le jao aur symbol set karo
   const handleStockSelectFromNews = (sym) => {
     setSymbol(sym);
     setActiveTab('dashboard');
@@ -47,7 +45,6 @@ export default function App() {
 
   return (
     <div className="app">
-      {/* ── TOP HEADER ── */}
       <header className="app-header">
         <div className="logo">
           <span className="logo-icon">◈</span>
@@ -55,7 +52,6 @@ export default function App() {
           <span className="logo-badge">sharemint.co</span>
         </div>
 
-        {/* NAV TABS */}
         <nav className="app-nav">
           {TABS.map(t => (
             <button
@@ -81,7 +77,7 @@ export default function App() {
             className={`refresh-btn ${spinning ? 'spinning' : ''}`}
             onClick={handleRefresh}
             disabled={spinning}
-            title="Refresh all scanners (cache clear karke fresh data fetch karega)"
+            title="Refresh all scanners"
           >
             <span className="refresh-icon">↻</span>
             <span className="refresh-txt">Refresh</span>
@@ -97,13 +93,9 @@ export default function App() {
         </div>
       </header>
 
-      {/* ── MARKET BAR ── */}
       <MarketBar />
 
-      {/* ── CONTENT AREA ── */}
       <div className="app-body">
-
-        {/* DASHBOARD TAB */}
         {activeTab === 'dashboard' && (
           <div className="dashboard-layout">
             <div className="dash-left">
@@ -116,19 +108,9 @@ export default function App() {
                 onRemove={removeFromWatchlist}
               />
             </div>
-            {/*
-            <div className="dash-center">
-              {/* No key prop needed — cache handles no-refetch on tab switch */}
-              <DMA200Scanner onSelect={setSymbol} />
-            </div>
-            <div className="dash-right">
-              <NewsFeed onStockSelect={handleStockSelectFromNews} />
-            </div>
-            */}
           </div>
         )}
 
-        {/* SCANNERS TAB */}
         {activeTab === 'scanners' && (
           <div className="scanners-layout">
             <div className="col-panel">
@@ -143,27 +125,23 @@ export default function App() {
           </div>
         )}
 
-        {/* ORDERS TAB */}
         {activeTab === 'orders' && (
           <div className="single-panel-layout">
             <OrdersTracker />
           </div>
         )}
 
-        {/* NEWS TAB */}
         {activeTab === 'news' && (
           <div className="single-panel-layout">
             <NewsFeed onStockSelect={handleStockSelectFromNews} />
           </div>
         )}
 
-        {/* PORTFOLIO TAB */}
         {activeTab === 'portfolio' && (
           <div className="single-panel-layout">
             <PortfolioTracker />
           </div>
         )}
-
       </div>
     </div>
   );
